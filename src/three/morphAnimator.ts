@@ -9,15 +9,21 @@ import {
 
 // Phase durations (seconds)
 const DISPLAY_DURATION = 2.0
-const SPINUP_DURATION = 0.8
+const SPINUP_DURATION = 1.6
 const POOF_OUT_DURATION = 0.2
 const POOF_IN_DURATION = 0.3
 
 const BASE_SPIN_SPEED = 0.8
 const MAX_SPIN_SPEED = 5.0
 
-// Scale: smallest screw starts at ~0.5, largest at ~1.0
-const MIN_START_SCALE = 0.5
+// Z-depth: screw starts far back and moves toward the camera over the display phase
+// Camera is at z=3.5. Distance from camera = 3.5 - Z. Apparent size ∝ height / distance.
+// We want all screws to reach roughly the same apparent size at the end of display.
+const CAMERA_Z = 3.5
+const Z_BACK_BASE = -0.5   // furthest back baseline (smallest screws start here)
+// Target apparent size calibrated from M3×8mm flat head looking good at z≈2.0 (dist 1.5)
+// height 0.627 / distance 1.5 ≈ 0.42
+const TARGET_APPARENT_SIZE = 0.42
 
 function easeInQuad(t: number): number {
   return t * t
@@ -38,27 +44,40 @@ export type AnimPhase = 'display' | 'spinup' | 'poofOut' | 'poofIn'
 export interface ScrewDisplayState {
   mesh: THREE.Mesh
   material: THREE.MeshStandardMaterial
+  pivot: THREE.Group    // pivot moves in Z; mesh stays at origin inside it
   currentIndex: number
   configs: ScrewConfig[]
   phase: AnimPhase
   phaseElapsed: number
   spinSpeed: number
   currentScale: number
-  baseScale: number
-  targetScale: number
+  startZ: number       // Z position at start of display (further back for smaller screws)
+  endZ: number         // Z position at end of display (varies per screw to normalize apparent size)
   maxHeight: number
-  needsSwap: boolean // signals scene to spawn particles + do geometry swap
-  swapDone: boolean  // scene confirms swap happened
+  needsSwap: boolean
+  swapDone: boolean
 }
 
-function computeBaseScale(config: ScrewConfig, maxHeight: number): number {
+/** Compute Z where screw reaches the target apparent size (end of display) */
+function computeEndZ(config: ScrewConfig): number {
   const height = getScrewVisualHeight(config)
-  const ratio = height / maxHeight // 0..1
-  // Map: smallest → MIN_START_SCALE, largest → 1.0
-  return MIN_START_SCALE + ratio * (1 - MIN_START_SCALE)
+  // apparentSize = height / (CAMERA_Z - z)  =>  z = CAMERA_Z - height / TARGET_APPARENT_SIZE
+  const z = CAMERA_Z - height / TARGET_APPARENT_SIZE
+  // Clamp so we don't get too close to the camera
+  return Math.min(z, CAMERA_Z - 0.8)
 }
 
-export function setupScrewMesh(configs: ScrewConfig[] = SHOWCASE_CONFIGS): {
+/** Smaller screws start further back for more dramatic Z travel */
+function computeStartZ(config: ScrewConfig, maxHeight: number): number {
+  const height = getScrewVisualHeight(config)
+  const ratio = height / maxHeight // 0..1 (1 = largest)
+  const endZ = computeEndZ(config)
+  // Start further back; smallest screws get the biggest travel range
+  const travel = 1.5 + (1 - ratio) * 1.5 // 1.5..3.0 units of travel
+  return endZ - travel
+}
+
+export function setupScrewMesh(pivot: THREE.Group, configs: ScrewConfig[] = SHOWCASE_CONFIGS): {
   state: ScrewDisplayState
   material: THREE.MeshStandardMaterial
 } {
@@ -73,21 +92,25 @@ export function setupScrewMesh(configs: ScrewConfig[] = SHOWCASE_CONFIGS): {
   const maxHeight = getMaxShowcaseHeight()
   const geometry = createScrewGeometry(configs[0])
   const mesh = new THREE.Mesh(geometry, material)
-  const baseScale = computeBaseScale(configs[0], maxHeight)
+  const startZ = computeStartZ(configs[0], maxHeight)
+  const endZ = computeEndZ(configs[0])
 
-  mesh.scale.setScalar(baseScale)
+  // Z-depth lives on the pivot, not the mesh — keeps mesh centered for rotation
+  pivot.position.z = startZ
+  pivot.position.y = 0.5 * startZ / CAMERA_Z
 
   const state: ScrewDisplayState = {
     mesh,
     material,
+    pivot,
     currentIndex: 0,
     configs,
     phase: 'display',
     phaseElapsed: 0,
     spinSpeed: BASE_SPIN_SPEED,
-    currentScale: baseScale,
-    baseScale,
-    targetScale: 1.0,
+    currentScale: 1.0,
+    startZ,
+    endZ,
     maxHeight,
     needsSwap: false,
     swapDone: false,
@@ -101,10 +124,12 @@ export function updateScrewDisplay(state: ScrewDisplayState, deltaTime: number):
 
   switch (state.phase) {
     case 'display': {
-      // Slowly scale up from baseScale toward targetScale
+      // Move pivot forward in Z from startZ toward endZ (per-screw target)
       const t = Math.min(1, state.phaseElapsed / DISPLAY_DURATION)
-      state.currentScale = state.baseScale + (state.targetScale - state.baseScale) * t
-      state.mesh.scale.setScalar(state.currentScale)
+      const z = state.startZ + (state.endZ - state.startZ) * t
+      state.pivot.position.z = z
+      // Compensate Y so screw stays on camera center line (cam at y=0.5, z=CAMERA_Z)
+      state.pivot.position.y = 0.5 * z / CAMERA_Z
       state.spinSpeed = BASE_SPIN_SPEED
 
       if (state.phaseElapsed >= DISPLAY_DURATION) {
@@ -115,7 +140,6 @@ export function updateScrewDisplay(state: ScrewDisplayState, deltaTime: number):
     }
 
     case 'spinup': {
-      // Accelerate rotation
       const t = Math.min(1, state.phaseElapsed / SPINUP_DURATION)
       state.spinSpeed = BASE_SPIN_SPEED + (MAX_SPIN_SPEED - BASE_SPIN_SPEED) * easeInQuad(t)
 
@@ -127,18 +151,16 @@ export function updateScrewDisplay(state: ScrewDisplayState, deltaTime: number):
     }
 
     case 'poofOut': {
-      // Scale down to 0
+      // Scale down to 0 for the poof
       const t = Math.min(1, state.phaseElapsed / POOF_OUT_DURATION)
-      state.currentScale = state.targetScale * (1 - easeInBack(t))
+      state.currentScale = 1 - easeInBack(t)
       state.mesh.scale.setScalar(Math.max(0.01, state.currentScale))
       state.spinSpeed = MAX_SPIN_SPEED
 
       if (t >= 1 && !state.needsSwap) {
-        // Signal the scene to spawn particles and swap geometry
         state.needsSwap = true
       }
 
-      // Wait for scene to confirm swap
       if (state.swapDone) {
         state.phase = 'poofIn'
         state.phaseElapsed = 0
@@ -149,16 +171,17 @@ export function updateScrewDisplay(state: ScrewDisplayState, deltaTime: number):
     }
 
     case 'poofIn': {
-      // Scale up from 0 with bounce
+      // Scale up from 0 with bounce, at the new startZ
       const t = Math.min(1, state.phaseElapsed / POOF_IN_DURATION)
-      state.currentScale = state.baseScale * easeOutBack(t)
+      state.currentScale = easeOutBack(t)
       state.mesh.scale.setScalar(Math.max(0.01, state.currentScale))
       state.spinSpeed = BASE_SPIN_SPEED + (MAX_SPIN_SPEED - BASE_SPIN_SPEED) * (1 - t)
 
       if (t >= 1) {
         state.phase = 'display'
         state.phaseElapsed = 0
-        state.currentScale = state.baseScale
+        state.currentScale = 1.0
+        state.mesh.scale.setScalar(1.0)
         state.spinSpeed = BASE_SPIN_SPEED
       }
       break
@@ -174,7 +197,11 @@ export function performSwap(state: ScrewDisplayState): void {
   state.mesh.geometry.dispose()
   state.mesh.geometry = createScrewGeometry(nextConfig)
 
-  state.baseScale = computeBaseScale(nextConfig, state.maxHeight)
+  // Reset to new start/end Z for next screw — on pivot, not mesh
+  state.startZ = computeStartZ(nextConfig, state.maxHeight)
+  state.endZ = computeEndZ(nextConfig)
+  state.pivot.position.z = state.startZ
+  state.pivot.position.y = 0.5 * state.startZ / CAMERA_Z
   state.mesh.scale.setScalar(0.01)
   state.swapDone = true
 }

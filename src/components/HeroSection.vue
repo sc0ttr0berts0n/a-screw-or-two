@@ -30,6 +30,7 @@ const screwSlug = computed(() => {
 
 <template>
   <section class="hero">
+    <div class="grid-bg"></div>
     <div class="hero-shapes">
       <div class="shape shape-triangle"></div>
       <div class="shape shape-circle"></div>
@@ -38,7 +39,6 @@ const screwSlug = computed(() => {
     </div>
     <div class="container hero-inner">
       <div class="hero-visual">
-        <div class="grid-bg"></div>
         <ScrewCanvas ref="screwCanvasRef" />
         <div v-if="screwLabel" class="screw-label">{{ screwLabel }}</div>
       </div>
@@ -145,40 +145,38 @@ const screwSlug = computed(() => {
   position: relative;
 }
 
-/* Measurement grid background */
+/* Measurement grid background — covers entire hero, behind everything */
 .grid-bg {
   position: absolute;
-  inset: 10%;
-  border-radius: var(--radius-lg);
-  background-color: rgba(255, 255, 255, 0.12);
+  inset: 0;
   background-image:
     /* 10mm bold lines */
     repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.18) 0px,
-      rgba(0, 0, 0, 0.18) 1px,
+      rgba(255, 255, 255, 0.25) 0px,
+      rgba(255, 255, 255, 0.25) 1px,
       transparent 1px,
       transparent 40px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.18) 0px,
-      rgba(0, 0, 0, 0.18) 1px,
+      rgba(255, 255, 255, 0.25) 0px,
+      rgba(255, 255, 255, 0.25) 1px,
       transparent 1px,
       transparent 40px
     ),
     /* 1mm fine lines */
     repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.06) 0px,
-      rgba(0, 0, 0, 0.06) 1px,
+      rgba(255, 255, 255, 0.08) 0px,
+      rgba(255, 255, 255, 0.08) 1px,
       transparent 1px,
       transparent 4px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.06) 0px,
-      rgba(0, 0, 0, 0.06) 1px,
+      rgba(255, 255, 255, 0.08) 0px,
+      rgba(255, 255, 255, 0.08) 1px,
       transparent 1px,
       transparent 4px
     );

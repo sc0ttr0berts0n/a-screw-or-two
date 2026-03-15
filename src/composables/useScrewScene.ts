@@ -48,12 +48,26 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.2
 
+    // Enable shadow maps
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+
     // Lights — 90's retro palette
     const ambientLight = new THREE.AmbientLight(0xffe135, 0.9)
     scene.add(ambientLight)
 
     const keyLight = new THREE.DirectionalLight(0xff88aa, 1.6)
     keyLight.position.set(3, 4, 5)
+    keyLight.castShadow = true
+    keyLight.shadow.mapSize.width = 1024
+    keyLight.shadow.mapSize.height = 1024
+    keyLight.shadow.camera.near = 0.5
+    keyLight.shadow.camera.far = 20
+    keyLight.shadow.camera.left = -3
+    keyLight.shadow.camera.right = 3
+    keyLight.shadow.camera.top = 3
+    keyLight.shadow.camera.bottom = -3
+    keyLight.shadow.bias = -0.001
     scene.add(keyLight)
 
     const fillLight = new THREE.DirectionalLight(0x00d4aa, 0.6)
@@ -64,15 +78,25 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     rimLight.position.set(0, -2, -4)
     scene.add(rimLight)
 
-    // Screw mesh
-    const { state } = setupScrewMesh()
-    displayState = state
+    // Shadow-receiving plane behind the screw (facing camera)
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(12, 12),
+      new THREE.ShadowMaterial({ opacity: 0.25 }),
+    )
+    shadowPlane.position.z = -2.0
+    shadowPlane.receiveShadow = true
+    scene.add(shadowPlane)
 
-    // Pivot group rotates on Y axis
+    // Pivot group rotates on Y axis — also holds Z-depth position
     pivot = new THREE.Group()
     scene.add(pivot)
 
-    // Tilt mesh to backslash angle
+    // Screw mesh — pivot is passed in so Z-depth animates on the pivot, not the mesh
+    const { state } = setupScrewMesh(pivot)
+    displayState = state
+    displayState.mesh.castShadow = true
+
+    // Tilt mesh to backslash angle — mesh stays at origin inside pivot
     displayState.mesh.rotation.z = -Math.PI / 6
     pivot.add(displayState.mesh)
 
