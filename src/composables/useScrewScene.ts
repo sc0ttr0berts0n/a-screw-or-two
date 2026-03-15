@@ -1,12 +1,12 @@
-import { onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { onMounted, onUnmounted, type Ref } from 'vue'
 import * as THREE from 'three'
-import { setupMorphTargets, updateMorph, type MorphState } from '@/three/morphAnimator'
+import { setupScrewMesh, updateScrewDisplay, type ScrewDisplayState } from '@/three/morphAnimator'
 
 export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
   let renderer: THREE.WebGLRenderer | null = null
   let scene: THREE.Scene | null = null
   let camera: THREE.PerspectiveCamera | null = null
-  let morphState: MorphState | null = null
+  let displayState: ScrewDisplayState | null = null
   let pivot: THREE.Group | null = null
   let animationId: number = 0
   let clock: THREE.Clock | null = null
@@ -51,17 +51,17 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     rimLight.position.set(0, -2, -4)
     scene.add(rimLight)
 
-    // Screw mesh with morph targets
-    const { state, material } = setupMorphTargets()
-    morphState = state
+    // Screw mesh with instant-swap display
+    const { state } = setupScrewMesh()
+    displayState = state
 
     // Pivot group rotates on the scene's Y axis
     pivot = new THREE.Group()
     scene.add(pivot)
 
     // Tilt the mesh to a backslash angle (~30° from vertical on Z axis)
-    morphState.mesh.rotation.z = -Math.PI / 6
-    pivot.add(morphState.mesh)
+    displayState.mesh.rotation.z = -Math.PI / 6
+    pivot.add(displayState.mesh)
 
     // Clock for delta time
     clock = new THREE.Clock()
@@ -73,15 +73,15 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
   function animate() {
     animationId = requestAnimationFrame(animate)
 
-    if (!renderer || !scene || !camera || !morphState || !clock || !pivot) return
+    if (!renderer || !scene || !camera || !displayState || !clock || !pivot) return
 
     const delta = clock.getDelta()
 
     // Rotate the pivot on the vertical Y axis (screw swings from \ to / orientation)
     pivot.rotation.y += delta * 0.8
 
-    // Update morph transitions
-    updateMorph(morphState, delta)
+    // Update screw display (instant swap on timer)
+    updateScrewDisplay(displayState, delta)
 
     renderer.render(scene, camera)
   }
@@ -107,7 +107,6 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
   onMounted(() => {
     init()
     window.addEventListener('resize', handleResize)
-    // Initial size
     setTimeout(handleResize, 0)
   })
 

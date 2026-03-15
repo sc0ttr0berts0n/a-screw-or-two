@@ -1,29 +1,70 @@
 import * as THREE from 'three'
+import type { ScrewSize, HeadType } from '@/types/product'
 
-export type ScrewHeadType = 'pan' | 'hex' | 'flat' | 'socketCap'
+export type ScrewHeadType = HeadType
+
+export interface ScrewConfig {
+  size: ScrewSize
+  lengthMm: number
+  headType: HeadType
+}
+
+// Physical dimensions per metric size (in scene units, not real mm)
+// Proportions based on ISO metric screw standards, scaled for display
+interface SizeDimensions {
+  shaftRadius: number
+  headRadius: number
+  headHeight: number
+  threadPitch: number
+  threadDepth: number
+}
+
+const SIZE_DIMENSIONS: Record<ScrewSize, SizeDimensions> = {
+  M1:     { shaftRadius: 0.04, headRadius: 0.09, headHeight: 0.06, threadPitch: 0.025, threadDepth: 0.010 },
+  'M1.6': { shaftRadius: 0.05, headRadius: 0.11, headHeight: 0.07, threadPitch: 0.030, threadDepth: 0.012 },
+  M2:     { shaftRadius: 0.06, headRadius: 0.13, headHeight: 0.08, threadPitch: 0.035, threadDepth: 0.015 },
+  'M2.5': { shaftRadius: 0.075, headRadius: 0.16, headHeight: 0.09, threadPitch: 0.040, threadDepth: 0.018 },
+  M3:     { shaftRadius: 0.09, headRadius: 0.19, headHeight: 0.10, threadPitch: 0.045, threadDepth: 0.020 },
+  M4:     { shaftRadius: 0.12, headRadius: 0.24, headHeight: 0.13, threadPitch: 0.060, threadDepth: 0.025 },
+  M5:     { shaftRadius: 0.15, headRadius: 0.29, headHeight: 0.15, threadPitch: 0.070, threadDepth: 0.030 },
+  M6:     { shaftRadius: 0.18, headRadius: 0.34, headHeight: 0.18, threadPitch: 0.085, threadDepth: 0.035 },
+  M8:     { shaftRadius: 0.24, headRadius: 0.43, headHeight: 0.22, threadPitch: 0.110, threadDepth: 0.045 },
+  M10:    { shaftRadius: 0.30, headRadius: 0.52, headHeight: 0.26, threadPitch: 0.130, threadDepth: 0.055 },
+}
+
+// Normalize shaft length so screws fit nicely in the viewport (~1.0–1.6 units)
+// Real lengths range from 2mm (M1) to 60mm (M10)
+const LENGTH_SCALE = 0.035 // 1mm real → 0.035 scene units
+const MIN_SHAFT_LENGTH = 0.5
+const MAX_SHAFT_LENGTH = 1.8
+
+function computeShaftLength(lengthMm: number): number {
+  return Math.max(MIN_SHAFT_LENGTH, Math.min(MAX_SHAFT_LENGTH, lengthMm * LENGTH_SCALE))
+}
 
 interface ScrewParams {
   shaftRadius: number
   shaftLength: number
   threadDepth: number
   threadPitch: number
-  headType: ScrewHeadType
+  headType: HeadType
   headRadius: number
   headHeight: number
   segments: number
-  threadTurns: number
 }
 
-const DEFAULT_PARAMS: ScrewParams = {
-  shaftRadius: 0.15,
-  shaftLength: 1.4,
-  threadDepth: 0.035,
-  threadPitch: 0.10,
-  headType: 'pan',
-  headRadius: 0.32,
-  headHeight: 0.18,
-  segments: 32,
-  threadTurns: 12,
+function configToParams(config: ScrewConfig): ScrewParams {
+  const dims = SIZE_DIMENSIONS[config.size]
+  return {
+    shaftRadius: dims.shaftRadius,
+    shaftLength: computeShaftLength(config.lengthMm),
+    threadDepth: dims.threadDepth,
+    threadPitch: dims.threadPitch,
+    headType: config.headType,
+    headRadius: dims.headRadius,
+    headHeight: dims.headHeight,
+    segments: 48,
+  }
 }
 
 function createShaftVertices(
@@ -36,7 +77,7 @@ function createShaftVertices(
   const uvs: number[] = []
   const indices: number[] = []
 
-  const { shaftRadius, shaftLength, threadDepth, threadPitch, threadTurns } = params
+  const { shaftRadius, shaftLength, threadDepth, threadPitch } = params
 
   for (let y = 0; y <= heightSegments; y++) {
     const v = y / heightSegments
@@ -46,12 +87,12 @@ function createShaftVertices(
       const u = x / radialSegments
       const angle = u * Math.PI * 2
 
-      // Add thread profile - sinusoidal approximation of helical thread
+      // Helical thread profile
       const threadAngle = (posY / threadPitch) * Math.PI * 2 + angle
       const threadOffset = Math.max(0, Math.cos(threadAngle)) * threadDepth
 
       // Machine screw: uniform threads, slight chamfer only at very bottom
-      const chamferZone = 0.03 // only the last 3% gets a small chamfer
+      const chamferZone = 0.03
       const chamferFactor = v < chamferZone ? v / chamferZone : 1
       const actualThread = threadOffset * chamferFactor
 
@@ -61,7 +102,6 @@ function createShaftVertices(
 
       positions.push(px, posY, pz)
 
-      // Normal
       const nx = Math.cos(angle)
       const nz = Math.sin(angle)
       normals.push(nx, 0, nz)
@@ -70,14 +110,12 @@ function createShaftVertices(
     }
   }
 
-  // Indices
   for (let y = 0; y < heightSegments; y++) {
     for (let x = 0; x < radialSegments; x++) {
       const a = y * (radialSegments + 1) + x
       const b = a + radialSegments + 1
       const c = a + 1
       const d = b + 1
-
       indices.push(a, b, c)
       indices.push(c, b, d)
     }
@@ -109,11 +147,9 @@ function createHeadVertices(
 
       switch (headType) {
         case 'hex': {
-          // Hexagonal cross-section
           const hexAngle = ((angle % (Math.PI / 3)) - Math.PI / 6)
           const hexR = headRadius / Math.cos(hexAngle)
           r = Math.min(hexR, headRadius * 1.15)
-          // Slight dome on top
           if (v > 0.8) {
             const t = (v - 0.8) / 0.2
             r *= 1 - t * 0.1
@@ -122,14 +158,12 @@ function createHeadVertices(
           break
         }
         case 'flat': {
-          // Countersunk / flat - cone shape
           const coneT = v
           r = shaftRadius + (headRadius - shaftRadius) * (1 - coneT)
           ny = 0.5
           break
         }
         case 'socketCap': {
-          // Cylindrical with flat top
           r = headRadius * 0.85
           if (v > 0.9) {
             ny = 1
@@ -138,7 +172,6 @@ function createHeadVertices(
         }
         case 'pan':
         default: {
-          // Rounded dome
           const dome = Math.sin(v * Math.PI * 0.5)
           r = shaftRadius + (headRadius - shaftRadius) * (1 - v * 0.3)
           ny = dome * 0.3
@@ -160,10 +193,10 @@ function createHeadVertices(
   return { positions, normals }
 }
 
-export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.BufferGeometry {
-  const params = { ...DEFAULT_PARAMS, headType }
+export function createScrewGeometry(config: ScrewConfig): THREE.BufferGeometry {
+  const params = configToParams(config)
   const radialSegments = params.segments
-  const shaftHeightSegments = 64
+  const shaftHeightSegments = 96
   const headSegments = 8
 
   // Create shaft
@@ -173,11 +206,10 @@ export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.Buff
   const headBaseY = params.shaftLength / 2
   const head = createHeadVertices(params, radialSegments, headSegments, headBaseY)
 
-  // Combine positions and normals
+  // Combine
   const allPositions = [...shaft.positions, ...head.positions]
   const allNormals = [...shaft.normals, ...head.normals]
 
-  // Generate UVs for head
   const headUvs: number[] = []
   for (let y = 0; y <= headSegments; y++) {
     for (let x = 0; x <= radialSegments; x++) {
@@ -186,7 +218,6 @@ export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.Buff
   }
   const allUvs = [...shaft.uvs, ...headUvs]
 
-  // Generate indices for head (offset by shaft vertex count)
   const shaftVertexCount = (shaftHeightSegments + 1) * (radialSegments + 1)
   const headIndices: number[] = []
   for (let y = 0; y < headSegments; y++) {
@@ -215,77 +246,52 @@ export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.Buff
 
   const allIndices = [...shaft.indices, ...connectIndices, ...headIndices]
 
-  // Head top cap — close the top of the head with a disc
-  const headCapPositions: number[] = []
-  const headCapNormals: number[] = []
-  const headCapUvs: number[] = []
-  const headCapIndices: number[] = []
+  // Head top cap
   const headCapStart = allPositions.length / 3
-
-  // Top ring of the head is the last row of head vertices
   const headTopRow = shaftVertexCount + headSegments * (radialSegments + 1)
   const headTopY = headBaseY + params.headHeight
 
-  // Center vertex
-  headCapPositions.push(0, headTopY, 0)
-  headCapNormals.push(0, 1, 0)
-  headCapUvs.push(0.5, 2)
+  allPositions.push(0, headTopY, 0)
+  allNormals.push(0, 1, 0)
+  allUvs.push(0.5, 2)
   const capCenter = headCapStart
 
-  // Fan triangles connecting center to the existing top ring vertices
   for (let x = 0; x < radialSegments; x++) {
-    headCapIndices.push(capCenter, headTopRow + x, headTopRow + x + 1)
+    allIndices.push(capCenter, headTopRow + x, headTopRow + x + 1)
   }
 
-  allPositions.push(...headCapPositions)
-  allNormals.push(...headCapNormals)
-  allUvs.push(...headCapUvs)
-  allIndices.push(...headCapIndices)
-
-  // Create flat chamfered tip (machine screw style)
-  const tipPositions: number[] = []
-  const tipNormals: number[] = []
-  const tipUvs: number[] = []
-  const tipIndices: number[] = []
+  // Flat chamfered tip (machine screw style)
   const currentVertCount = allPositions.length / 3
-
-  // Small chamfer ring (slightly smaller radius, slightly below shaft bottom)
   const chamferRadius = params.shaftRadius * 0.7
   const chamferY = -params.shaftLength / 2 - params.shaftRadius * 0.3
 
   for (let x = 0; x <= radialSegments; x++) {
     const u = x / radialSegments
     const angle = u * Math.PI * 2
-    tipPositions.push(Math.cos(angle) * chamferRadius, chamferY, Math.sin(angle) * chamferRadius)
-    tipNormals.push(Math.cos(angle) * 0.5, -0.866, Math.sin(angle) * 0.5)
-    tipUvs.push(u, -0.05)
+    allPositions.push(Math.cos(angle) * chamferRadius, chamferY, Math.sin(angle) * chamferRadius)
+    allNormals.push(Math.cos(angle) * 0.5, -0.866, Math.sin(angle) * 0.5)
+    allUvs.push(u, -0.05)
   }
 
-  // Connect shaft bottom ring to chamfer ring
   const chamferStart = currentVertCount
   for (let x = 0; x < radialSegments; x++) {
-    const a = x // shaft bottom vertex
+    const a = x
     const b = chamferStart + x
     const c = x + 1
     const d = chamferStart + x + 1
-    tipIndices.push(a, b, c)
-    tipIndices.push(c, b, d)
+    allIndices.push(a, b, c)
+    allIndices.push(c, b, d)
   }
 
-  // Flat bottom cap (center point + fan)
-  const capCenterIdx = currentVertCount + radialSegments + 1
-  tipPositions.push(0, chamferY, 0)
-  tipNormals.push(0, -1, 0)
-  tipUvs.push(0.5, -0.1)
+  // Flat bottom cap
+  const capCenterIdx = allPositions.length / 3
+  allPositions.push(0, chamferY, 0)
+  allNormals.push(0, -1, 0)
+  allUvs.push(0.5, -0.1)
 
   for (let x = 0; x < radialSegments; x++) {
-    tipIndices.push(capCenterIdx, chamferStart + x + 1, chamferStart + x)
+    allIndices.push(capCenterIdx, chamferStart + x + 1, chamferStart + x)
   }
-
-  allPositions.push(...tipPositions)
-  allNormals.push(...tipNormals)
-  allUvs.push(...tipUvs)
-  allIndices.push(...tipIndices)
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(allPositions, 3))
@@ -297,11 +303,14 @@ export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.Buff
   return geometry
 }
 
-export function createAllScrewGeometries(): Map<ScrewHeadType, THREE.BufferGeometry> {
-  const types: ScrewHeadType[] = ['pan', 'hex', 'flat', 'socketCap']
-  const geometries = new Map<ScrewHeadType, THREE.BufferGeometry>()
-  for (const type of types) {
-    geometries.set(type, createScrewGeometry(type))
-  }
-  return geometries
-}
+// Showcase configs that cycle through the product range
+export const SHOWCASE_CONFIGS: ScrewConfig[] = [
+  { size: 'M2', lengthMm: 6, headType: 'pan' },
+  { size: 'M3', lengthMm: 10, headType: 'hex' },
+  { size: 'M4', lengthMm: 16, headType: 'flat' },
+  { size: 'M5', lengthMm: 20, headType: 'socketCap' },
+  { size: 'M6', lengthMm: 25, headType: 'pan' },
+  { size: 'M8', lengthMm: 30, headType: 'hex' },
+  { size: 'M10', lengthMm: 40, headType: 'socketCap' },
+  { size: 'M3', lengthMm: 8, headType: 'flat' },
+]
