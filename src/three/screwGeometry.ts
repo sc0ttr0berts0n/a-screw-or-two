@@ -303,6 +303,19 @@ export function createScrewGeometry(config: ScrewConfig): THREE.BufferGeometry {
   return geometry
 }
 
+/** Total visual height of a screw in scene units (shaft + head + chamfer tip) */
+export function getScrewVisualHeight(config: ScrewConfig): number {
+  const dims = SIZE_DIMENSIONS[config.size]
+  const shaftLength = computeShaftLength(config.lengthMm)
+  const chamferDrop = dims.shaftRadius * 0.3
+  return shaftLength + dims.headHeight + chamferDrop
+}
+
+/** Max visual height across all showcase configs — used as the reference for scale=1 */
+export function getMaxShowcaseHeight(): number {
+  return Math.max(...SHOWCASE_CONFIGS.map(getScrewVisualHeight))
+}
+
 // Showcase configs that cycle through the product range
 export const SHOWCASE_CONFIGS: ScrewConfig[] = [
   { size: 'M2', lengthMm: 6, headType: 'pan' },

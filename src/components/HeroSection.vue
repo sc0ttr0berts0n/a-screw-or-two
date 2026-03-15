@@ -1,5 +1,31 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import ScrewCanvas from './ScrewCanvas.vue'
+import type { ScrewConfig } from '@/three/screwGeometry'
+
+const screwCanvasRef = ref<InstanceType<typeof ScrewCanvas> | null>(null)
+
+const currentConfig = computed<ScrewConfig | null>(() => {
+  return screwCanvasRef.value?.currentConfig ?? null
+})
+
+const screwLabel = computed(() => {
+  const c = currentConfig.value
+  if (!c) return ''
+  const headLabels: Record<string, string> = {
+    pan: 'Pan Head',
+    hex: 'Hex Head',
+    flat: 'Flat Head',
+    socketCap: 'Socket Cap',
+  }
+  return `${c.size}×${c.lengthMm}mm ${headLabels[c.headType] || c.headType}`
+})
+
+const screwSlug = computed(() => {
+  const c = currentConfig.value
+  if (!c) return '/shop'
+  return `/shop/${c.size.toLowerCase()}-${c.lengthMm}mm-${c.headType}`
+})
 </script>
 
 <template>
@@ -12,7 +38,9 @@ import ScrewCanvas from './ScrewCanvas.vue'
     </div>
     <div class="container hero-inner">
       <div class="hero-visual">
-        <ScrewCanvas />
+        <div class="grid-bg"></div>
+        <ScrewCanvas ref="screwCanvasRef" />
+        <div v-if="screwLabel" class="screw-label">{{ screwLabel }}</div>
       </div>
       <div class="hero-content">
         <h1 class="hero-title">
@@ -23,7 +51,12 @@ import ScrewCanvas from './ScrewCanvas.vue'
           Individual metric screws and nuts, M1 through M10.
           No bulk packs, no minimum order. Just what you need.
         </p>
-        <router-link to="/shop" class="hero-cta">Shop Now</router-link>
+        <div class="hero-buttons">
+          <router-link to="/shop" class="hero-cta">Shop Now</router-link>
+          <router-link v-if="currentConfig" :to="screwSlug" class="hero-cta hero-cta-buy">
+            Buy This Screw
+          </router-link>
+        </div>
       </div>
     </div>
   </section>
@@ -109,6 +142,65 @@ import ScrewCanvas from './ScrewCanvas.vue'
 
 .hero-visual {
   height: 400px;
+  position: relative;
+}
+
+/* Measurement grid background */
+.grid-bg {
+  position: absolute;
+  inset: 10%;
+  border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.12);
+  background-image:
+    /* 10mm bold lines */
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    /* 1mm fine lines */
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.06) 0px,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.06) 0px,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.screw-label {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-secondary);
+  color: var(--color-text);
+  padding: 0.4rem 1rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-hard);
+  white-space: nowrap;
+  z-index: 2;
 }
 
 .hero-content {
@@ -141,6 +233,12 @@ import ScrewCanvas from './ScrewCanvas.vue'
   font-weight: 700;
 }
 
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .hero-cta {
   display: inline-block;
   background: var(--color-primary);
@@ -158,6 +256,12 @@ import ScrewCanvas from './ScrewCanvas.vue'
 .hero-cta:hover {
   transform: translate(-2px, -2px);
   box-shadow: var(--shadow-hard-lg);
+}
+
+.hero-cta-buy {
+  background: var(--color-teal);
+  color: var(--color-text);
+  border-color: #000;
 }
 
 @media (max-width: 768px) {
@@ -181,6 +285,10 @@ import ScrewCanvas from './ScrewCanvas.vue'
     margin-right: auto;
   }
 
+  .hero-buttons {
+    justify-content: center;
+  }
+
   .shape-triangle,
   .shape-zigzag {
     display: none;
@@ -199,6 +307,11 @@ import ScrewCanvas from './ScrewCanvas.vue'
 
   .hero-visual {
     height: 220px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
   }
 }
 </style>
