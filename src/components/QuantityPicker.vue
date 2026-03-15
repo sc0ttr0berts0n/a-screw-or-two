@@ -37,19 +37,18 @@ function onInput(e: Event) {
   display: flex;
   align-items: center;
   gap: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border: var(--border-thick);
   overflow: hidden;
   width: fit-content;
 }
 
 .qty-btn {
-  background: var(--color-surface);
+  background: var(--color-secondary);
   color: var(--color-text);
   width: 40px;
   height: 40px;
   font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,7 +56,8 @@ function onInput(e: Event) {
 }
 
 .qty-btn:hover:not(:disabled) {
-  background: var(--color-surface-hover);
+  background: var(--color-primary);
+  color: white;
 }
 
 .qty-btn:disabled {
@@ -69,12 +69,13 @@ function onInput(e: Event) {
   width: 50px;
   height: 40px;
   text-align: center;
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text);
   border: none;
-  border-left: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
+  border-left: var(--border-thick);
+  border-right: var(--border-thick);
   font-size: 1rem;
+  font-weight: 700;
   -moz-appearance: textfield;
 }
 

@@ -7,6 +7,7 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
   let scene: THREE.Scene | null = null
   let camera: THREE.PerspectiveCamera | null = null
   let morphState: MorphState | null = null
+  let pivot: THREE.Group | null = null
   let animationId: number = 0
   let clock: THREE.Clock | null = null
 
@@ -34,19 +35,19 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.2
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x404060, 0.8)
+    // Lights — 90's retro palette
+    const ambientLight = new THREE.AmbientLight(0xffe135, 0.9)
     scene.add(ambientLight)
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    const keyLight = new THREE.DirectionalLight(0xff88aa, 1.6)
     keyLight.position.set(3, 4, 5)
     scene.add(keyLight)
 
-    const fillLight = new THREE.DirectionalLight(0x8888ff, 0.4)
+    const fillLight = new THREE.DirectionalLight(0x00d4aa, 0.6)
     fillLight.position.set(-2, 1, -3)
     scene.add(fillLight)
 
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.6)
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.5)
     rimLight.position.set(0, -2, -4)
     scene.add(rimLight)
 
@@ -54,9 +55,13 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     const { state, material } = setupMorphTargets()
     morphState = state
 
-    // Tilt 30 degrees
-    morphState.mesh.rotation.x = Math.PI / 6
-    scene.add(morphState.mesh)
+    // Pivot group rotates on the scene's Y axis
+    pivot = new THREE.Group()
+    scene.add(pivot)
+
+    // Tilt the mesh to a backslash angle (~30° from vertical on Z axis)
+    morphState.mesh.rotation.z = -Math.PI / 6
+    pivot.add(morphState.mesh)
 
     // Clock for delta time
     clock = new THREE.Clock()
@@ -68,12 +73,12 @@ export function useScrewScene(canvasRef: Ref<HTMLCanvasElement | null>) {
   function animate() {
     animationId = requestAnimationFrame(animate)
 
-    if (!renderer || !scene || !camera || !morphState || !clock) return
+    if (!renderer || !scene || !camera || !morphState || !clock || !pivot) return
 
     const delta = clock.getDelta()
 
-    // Rotate continuously
-    morphState.mesh.rotation.y += delta * 0.8
+    // Rotate the pivot on the vertical Y axis (screw swings from \ to / orientation)
+    pivot.rotation.y += delta * 0.8
 
     // Update morph transitions
     updateMorph(morphState, delta)

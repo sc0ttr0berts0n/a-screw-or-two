@@ -193,15 +193,16 @@ function addToCart() {
   text-align: center;
   font-size: 2rem;
   margin-bottom: 2.5rem;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .form-card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: var(--border-thick);
   padding: 2.5rem;
   max-width: 700px;
   margin: 0 auto;
+  box-shadow: var(--shadow-hard-lg);
 }
 
 .form-group {
@@ -210,9 +211,9 @@ function addToCart() {
 
 .form-label {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.75rem;
@@ -227,23 +228,22 @@ function addToCart() {
 .option-btn {
   background: var(--color-bg);
   color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border: 2px solid var(--color-text);
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 700;
   transition: all var(--transition);
 }
 
 .option-btn:hover {
-  border-color: var(--color-primary);
-  background: var(--color-bg-alt);
+  background: var(--color-secondary);
 }
 
 .option-btn.active {
   background: var(--color-primary);
-  border-color: var(--color-primary);
+  border-color: var(--color-text);
   color: white;
+  box-shadow: 2px 2px 0 #000;
 }
 
 .form-footer {
@@ -252,7 +252,7 @@ function addToCart() {
   justify-content: space-between;
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-thick);
 }
 
 .price-display {
@@ -276,26 +276,28 @@ function addToCart() {
   background: var(--color-primary);
   color: white;
   padding: 0.85rem 2rem;
-  border-radius: var(--radius);
   font-size: 1.05rem;
-  font-weight: 600;
-  transition: background var(--transition), transform var(--transition);
+  font-weight: 700;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-hard);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .add-to-cart-btn:hover {
-  background: var(--color-primary-hover);
-  transform: translateY(-2px);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-hard-lg);
 }
 
 .added-msg {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid var(--color-success);
-  border-radius: var(--radius);
-  color: var(--color-success);
+  background: var(--color-teal);
+  border: var(--border-thick);
+  color: var(--color-text);
   text-align: center;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .fade-enter-active,

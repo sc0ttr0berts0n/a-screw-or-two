@@ -17,13 +17,13 @@ interface ScrewParams {
 const DEFAULT_PARAMS: ScrewParams = {
   shaftRadius: 0.15,
   shaftLength: 1.4,
-  threadDepth: 0.04,
-  threadPitch: 0.12,
+  threadDepth: 0.035,
+  threadPitch: 0.10,
   headType: 'pan',
-  headRadius: 0.35,
-  headHeight: 0.2,
+  headRadius: 0.32,
+  headHeight: 0.18,
   segments: 32,
-  threadTurns: 10,
+  threadTurns: 12,
 }
 
 function createShaftVertices(
@@ -50,9 +50,10 @@ function createShaftVertices(
       const threadAngle = (posY / threadPitch) * Math.PI * 2 + angle
       const threadOffset = Math.max(0, Math.cos(threadAngle)) * threadDepth
 
-      // Taper threads near tip
-      const tipFactor = Math.min(1, (1 - v) * 5)
-      const actualThread = threadOffset * tipFactor
+      // Machine screw: uniform threads, slight chamfer only at very bottom
+      const chamferZone = 0.03 // only the last 3% gets a small chamfer
+      const chamferFactor = v < chamferZone ? v / chamferZone : 1
+      const actualThread = threadOffset * chamferFactor
 
       const r = shaftRadius + actualThread
       const px = Math.cos(angle) * r
@@ -214,23 +215,71 @@ export function createScrewGeometry(headType: ScrewHeadType = 'pan'): THREE.Buff
 
   const allIndices = [...shaft.indices, ...connectIndices, ...headIndices]
 
-  // Create tip (cone at bottom)
+  // Head top cap — close the top of the head with a disc
+  const headCapPositions: number[] = []
+  const headCapNormals: number[] = []
+  const headCapUvs: number[] = []
+  const headCapIndices: number[] = []
+  const headCapStart = allPositions.length / 3
+
+  // Top ring of the head is the last row of head vertices
+  const headTopRow = shaftVertexCount + headSegments * (radialSegments + 1)
+  const headTopY = headBaseY + params.headHeight
+
+  // Center vertex
+  headCapPositions.push(0, headTopY, 0)
+  headCapNormals.push(0, 1, 0)
+  headCapUvs.push(0.5, 2)
+  const capCenter = headCapStart
+
+  // Fan triangles connecting center to the existing top ring vertices
+  for (let x = 0; x < radialSegments; x++) {
+    headCapIndices.push(capCenter, headTopRow + x, headTopRow + x + 1)
+  }
+
+  allPositions.push(...headCapPositions)
+  allNormals.push(...headCapNormals)
+  allUvs.push(...headCapUvs)
+  allIndices.push(...headCapIndices)
+
+  // Create flat chamfered tip (machine screw style)
   const tipPositions: number[] = []
   const tipNormals: number[] = []
   const tipUvs: number[] = []
   const tipIndices: number[] = []
   const currentVertCount = allPositions.length / 3
 
-  // Tip point
-  tipPositions.push(0, -params.shaftLength / 2 - params.shaftRadius * 1.5, 0)
+  // Small chamfer ring (slightly smaller radius, slightly below shaft bottom)
+  const chamferRadius = params.shaftRadius * 0.7
+  const chamferY = -params.shaftLength / 2 - params.shaftRadius * 0.3
+
+  for (let x = 0; x <= radialSegments; x++) {
+    const u = x / radialSegments
+    const angle = u * Math.PI * 2
+    tipPositions.push(Math.cos(angle) * chamferRadius, chamferY, Math.sin(angle) * chamferRadius)
+    tipNormals.push(Math.cos(angle) * 0.5, -0.866, Math.sin(angle) * 0.5)
+    tipUvs.push(u, -0.05)
+  }
+
+  // Connect shaft bottom ring to chamfer ring
+  const chamferStart = currentVertCount
+  for (let x = 0; x < radialSegments; x++) {
+    const a = x // shaft bottom vertex
+    const b = chamferStart + x
+    const c = x + 1
+    const d = chamferStart + x + 1
+    tipIndices.push(a, b, c)
+    tipIndices.push(c, b, d)
+  }
+
+  // Flat bottom cap (center point + fan)
+  const capCenterIdx = currentVertCount + radialSegments + 1
+  tipPositions.push(0, chamferY, 0)
   tipNormals.push(0, -1, 0)
   tipUvs.push(0.5, -0.1)
 
-  // Connect to shaft bottom ring
   for (let x = 0; x < radialSegments; x++) {
-    const a = x // shaft bottom vertex
-    const b = (x + 1) % radialSegments
-    tipIndices.push(currentVertCount, a, b)
+    tipIndices.push(capCenterIdx, chamferStart + x + 1, chamferStart + x)
   }
 
   allPositions.push(...tipPositions)

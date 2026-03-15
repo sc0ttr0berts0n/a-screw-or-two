@@ -6,10 +6,10 @@
         <p class="footer-tagline">Individual screws for individual projects.</p>
       </div>
       <div class="footer-links">
-        <a href="#purchase">Shop</a>
-        <a href="#">About</a>
-        <a href="#">Contact</a>
-        <a href="#">FAQ</a>
+        <router-link to="/shop">Shop</router-link>
+        <router-link to="/kits">Kits</router-link>
+        <router-link to="/about">About</router-link>
+        <router-link to="/faq">FAQ</router-link>
       </div>
       <div class="footer-copy">
         &copy; {{ new Date().getFullYear() }} A Screw or Two. All rights reserved.
@@ -20,8 +20,8 @@
 
 <style scoped>
 .footer {
-  background: var(--color-bg-alt);
-  border-top: 1px solid var(--color-border);
+  background: #1a1a2e;
+  border-top: 5px solid var(--color-primary);
   padding: 3rem 0 1.5rem;
 }
 
@@ -34,12 +34,14 @@
 }
 
 .footer-logo {
+  font-family: var(--font-display);
   font-size: 1.3rem;
-  font-weight: 700;
+  color: var(--color-secondary);
+  text-transform: uppercase;
 }
 
 .footer-tagline {
-  color: var(--color-text-muted);
+  color: #a0a0b0;
   font-size: 0.9rem;
   margin-top: 0.25rem;
 }
@@ -50,17 +52,19 @@
 }
 
 .footer-links a {
-  color: var(--color-text-muted);
+  color: var(--color-teal);
   font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
   transition: color var(--transition);
 }
 
 .footer-links a:hover {
-  color: var(--color-text);
+  color: var(--color-primary);
 }
 
 .footer-copy {
-  color: var(--color-text-dim);
+  color: #6b6b80;
   font-size: 0.8rem;
 }
 </style>

@@ -53,10 +53,11 @@ export function setupMorphTargets(): {
   baseGeometry.morphAttributes.position = morphAttributes
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0xb8b8b8,
-    metalness: 0.85,
-    roughness: 0.25,
+    color: 0xff2d7b,
+    metalness: 0.45,
+    roughness: 0.4,
     flatShading: false,
+    side: THREE.DoubleSide,
   })
 
   const mesh = new THREE.Mesh(baseGeometry, material)
