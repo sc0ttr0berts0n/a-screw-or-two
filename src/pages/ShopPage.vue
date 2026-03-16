@@ -3,6 +3,10 @@ import { useProducts } from '@/composables/useProducts'
 import ProductCard from '@/components/ProductCard.vue'
 
 const { data: products, loading, error } = useProducts()
+
+function retry() {
+  window.location.reload()
+}
 </script>
 
 <template>
@@ -12,9 +16,13 @@ const { data: products, loading, error } = useProducts()
       <p class="page-subtitle">Individual metric screws, nuts, washers, inserts, and standoffs.</p>
 
       <div v-if="loading" class="status-msg">Loading products...</div>
-      <div v-else-if="error" class="status-msg error">{{ error }}</div>
+      <div v-else-if="error" class="status-msg error">
+        <p class="error-icon">:(</p>
+        <p class="error-text">{{ error }}</p>
+        <button class="retry-btn" @click="retry">Try Again</button>
+      </div>
       <div v-else-if="!products || products.length === 0" class="status-msg">
-        No products found. Make sure your Sanity project is configured and seeded.
+        No products found yet. Check back soon!
       </div>
       <div v-else class="product-grid">
         <ProductCard v-for="product in products" :key="product._id" :product="product" />
@@ -60,7 +68,40 @@ const { data: products, loading, error } = useProducts()
 }
 
 .status-msg.error {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-text);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  font-weight: 700;
+  opacity: 0.4;
+}
+
+.error-text {
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.retry-btn {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-hard);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.retry-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-hard-lg);
 }
 </style>

@@ -10,7 +10,7 @@ export function useSanityQuery<T>(query: string, params: Record<string, unknown>
     try {
       data.value = await sanityClient.fetch<T>(query, params)
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch data'
+      error.value = "Couldn't load content right now. Please try again later."
       console.error('Sanity query error:', err)
     } finally {
       loading.value = false

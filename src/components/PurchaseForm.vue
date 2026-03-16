@@ -12,6 +12,7 @@ import {
 } from '@/types/product'
 import { useCart } from '@/composables/useCart'
 import QuantityPicker from './QuantityPicker.vue'
+import ScrewPreview from './ScrewPreview.vue'
 
 const cart = useCart()
 
@@ -85,6 +86,8 @@ function addToCart() {
     <div class="container">
       <h2 class="section-title">Pick Your Screws</h2>
       <div class="form-card">
+        <div class="form-layout">
+        <div class="form-fields">
         <!-- Size -->
         <div class="form-group">
           <label class="form-label">Size</label>
@@ -167,6 +170,23 @@ function addToCart() {
           <QuantityPicker v-model="quantity" />
         </div>
 
+        </div><!-- end .form-fields -->
+
+        <div class="form-preview">
+          <ScrewPreview
+            v-if="selectedType !== 'nut'"
+            :headType="selectedHead"
+            :lengthMm="selectedLength"
+            :showNut="selectedType === 'both'"
+          />
+          <!-- Nut-only preview -->
+          <svg v-else class="nut-preview" viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="16,8 28,2 52,2 64,8 64,32 52,38 28,38 16,32" />
+            <circle cx="40" cy="20" r="8" fill="var(--color-bg)" stroke="var(--color-bg)" stroke-width="1.5" />
+          </svg>
+        </div>
+        </div><!-- end .form-layout -->
+
         <!-- Price + Add to Cart -->
         <div class="form-footer">
           <div class="price-display">
@@ -176,11 +196,14 @@ function addToCart() {
           <button class="add-to-cart-btn" @click="addToCart">Add to Cart</button>
         </div>
 
-        <Transition name="fade">
-          <div v-if="addedMessage" class="added-msg">{{ addedMessage }}</div>
-        </Transition>
+        <p class="shipping-note">Ships in a padded envelope — flat rate $3.99</p>
       </div>
     </div>
+
+    <!-- Fixed toast -->
+    <Transition name="toast">
+      <div v-if="addedMessage" class="cart-toast">{{ addedMessage }}</div>
+    </Transition>
   </section>
 </template>
 
@@ -203,6 +226,31 @@ function addToCart() {
   max-width: 700px;
   margin: 0 auto;
   box-shadow: var(--shadow-hard-lg);
+}
+
+.form-layout {
+  display: flex;
+  gap: 2rem;
+}
+
+.form-fields {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 1rem 0;
+}
+
+.nut-preview {
+  width: 60px;
+  height: 40px;
+  color: var(--color-text);
+  opacity: 0.7;
 }
 
 .form-group {
@@ -290,28 +338,51 @@ function addToCart() {
   box-shadow: var(--shadow-hard-lg);
 }
 
-.added-msg {
+.shipping-note {
   margin-top: 1rem;
-  padding: 0.75rem;
-  background: var(--color-teal);
-  border: var(--border-thick);
-  color: var(--color-text);
   text-align: center;
-  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
+.cart-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--color-secondary);
+  color: var(--color-text);
+  border: var(--border-thick);
+  box-shadow: var(--shadow-hard);
+  padding: 0.75rem 2rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.fade-enter-from,
-.fade-leave-to {
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+.toast-enter-from {
   opacity: 0;
+  transform: translateX(-50%) translateY(-20px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
 }
 
 @media (max-width: 480px) {
   .form-card {
     padding: 1.5rem;
+  }
+
+  .form-preview {
+    display: none;
   }
 
   .form-footer {
