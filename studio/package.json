@@ -1,0 +1,23 @@
+{
+  "name": "a-screw-or-two-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "sanity dev",
+    "build": "sanity build",
+    "deploy": "sanity deploy"
+  },
+  "dependencies": {
+    "@sanity/client": "^6.27.2",
+    "@sanity/vision": "^3.72.2",
+    "dotenv": "^17.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sanity": "^3.72.2",
+    "styled-components": "^6.1.14"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "~5.7.3"
+  }
+}

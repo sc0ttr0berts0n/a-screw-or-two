@@ -3,7 +3,9 @@ import { ref } from 'vue'
 import { useScrewScene } from '@/composables/useScrewScene'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-useScrewScene(canvasRef)
+const { currentConfig } = useScrewScene(canvasRef)
+
+defineExpose({ currentConfig })
 </script>
 
 <template>

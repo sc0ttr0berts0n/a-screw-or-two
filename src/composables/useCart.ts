@@ -1,10 +1,28 @@
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import type { CartItem, ProductSpec } from '@/types/product'
 import { getPrice, formatPrice, describeProduct } from '@/types/product'
 
+const STORAGE_KEY = 'asot-cart'
+
+function loadCart(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return []
+}
+
+function saveCart(items: CartItem[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  } catch { /* ignore */ }
+}
+
 const state = reactive<{ items: CartItem[] }>({
-  items: [],
+  items: loadCart(),
 })
+
+watch(() => [...state.items], () => saveCart(state.items), { deep: true })
 
 let nextId = 1
 
