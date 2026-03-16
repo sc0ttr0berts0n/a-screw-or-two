@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build-only"
+  publish = "dist"
+
+# SPA fallback — serve index.html for all routes not matching a file
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Edge function: intercept /kits/:slug for social crawler OG tags
+[[edge_functions]]
+  path = "/kits/*"
+  function = "kit-meta-proxy"
+
+# Edge function: dynamic sitemap
+[[edge_functions]]
+  path = "/sitemap.xml"
+  function = "sitemap"

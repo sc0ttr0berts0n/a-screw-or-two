@@ -2,10 +2,14 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCart } from './composables/useCart'
+import { useAuth } from './composables/useAuth'
 import CartSummary from './components/CartSummary.vue'
 import FooterSection from './components/FooterSection.vue'
+import AuthModal from './components/AuthModal.vue'
+import UserMenu from './components/UserMenu.vue'
 
 const cart = useCart()
+const auth = useAuth()
 const menuOpen = ref(false)
 const route = useRoute()
 
@@ -29,6 +33,14 @@ watch(() => route.path, () => { menuOpen.value = false })
             Cart
             <span v-if="cart.itemCount.value > 0" class="cart-badge">{{ cart.itemCount.value }}</span>
           </router-link>
+          <button
+            v-if="!auth.isAuthenticated.value && !auth.loading.value"
+            class="nav-signin"
+            @click="auth.showAuthModal.value = true; menuOpen = false"
+          >
+            Sign In
+          </button>
+          <UserMenu v-if="auth.isAuthenticated.value" />
         </nav>
       </div>
     </header>
@@ -39,6 +51,7 @@ watch(() => route.path, () => { menuOpen.value = false })
 
     <FooterSection />
     <CartSummary />
+    <AuthModal />
   </div>
 </template>
 
@@ -94,6 +107,26 @@ watch(() => route.path, () => { menuOpen.value = false })
 
 .nav-cart-link {
   position: relative;
+}
+
+.nav-signin {
+  background: var(--color-primary);
+  color: white;
+  border: 2px solid var(--color-text);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #000;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.nav-signin:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #000;
 }
 
 .cart-badge {
