@@ -195,40 +195,45 @@ async function saveKit(publish = false) {
   saveMessage.value = ''
 
   try {
-    const slug = kitId.value
-      ? undefined // Don't change slug on update
-      : slugify(title.value) + '-' + Date.now().toString(36)
-
-    const kitData = {
-      author_id: auth.user.value.id,
-      slug: slug!,
-      title: title.value.trim(),
-      description: description.value.trim() || null,
-      project_url: projectUrl.value.trim() || null,
-      tags: tags.value,
-      category: category.value,
-      status: publish ? 'published' as const : 'draft' as const,
-      retail_total_cents: totalCents.value,
-      item_count: itemCount.value,
-      published_at: publish ? new Date().toISOString() : null,
-    }
-
     let savedKitId: string
 
     if (kitId.value) {
       // Update existing
-      const { slug: _, ...updateData } = kitData
       const { error } = await supabase
         .from('community_kits')
-        .update(updateData)
+        .update({
+          author_id: auth.user.value.id,
+          title: title.value.trim(),
+          description: description.value.trim() || null,
+          project_url: projectUrl.value.trim() || null,
+          tags: tags.value,
+          category: category.value,
+          status: publish ? 'published' as const : 'draft' as const,
+          retail_total_cents: totalCents.value,
+          item_count: itemCount.value,
+          published_at: publish ? new Date().toISOString() : null,
+        })
         .eq('id', kitId.value)
       if (error) throw error
       savedKitId = kitId.value
     } else {
       // Insert new
+      const newSlug = slugify(title.value) + '-' + Date.now().toString(36)
       const { data, error } = await supabase
         .from('community_kits')
-        .insert(kitData)
+        .insert({
+          author_id: auth.user.value.id,
+          slug: newSlug,
+          title: title.value.trim(),
+          description: description.value.trim() || null,
+          project_url: projectUrl.value.trim() || null,
+          tags: tags.value,
+          category: category.value,
+          status: publish ? 'published' as const : 'draft' as const,
+          retail_total_cents: totalCents.value,
+          item_count: itemCount.value,
+          published_at: publish ? new Date().toISOString() : null,
+        })
         .select('id, slug')
         .single()
       if (error) throw error

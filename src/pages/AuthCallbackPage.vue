@@ -6,38 +6,48 @@ import { supabase } from '@/lib/supabase'
 const router = useRouter()
 const error = ref('')
 
-onMounted(async () => {
-  try {
-    const { error: authError } = await supabase.auth.exchangeCodeForSession(
-      window.location.href,
-    )
-    if (authError) throw authError
+onMounted(() => {
+  // Supabase PKCE flow: the client auto-exchanges the code via onAuthStateChange.
+  // We just listen for the session to appear, then redirect.
+  const timeout = setTimeout(() => {
+    error.value = 'Authentication timed out. Please try again.'
+    setTimeout(() => router.replace('/'), 2000)
+  }, 10000)
 
-    // Check if user needs to set a username (redirect to profile setup)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+
+      // Check if user needs to set a username (redirect to profile setup)
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single()
 
-      // If username starts with 'user-' it's the auto-generated one — prompt to change
       if (profile?.username?.startsWith('user-')) {
         router.replace('/my-kits?setup=true')
         return
       }
-    }
 
-    // Redirect to where they came from, or home
-    const redirectTo = sessionStorage.getItem('auth-redirect') || '/'
-    sessionStorage.removeItem('auth-redirect')
-    router.replace(redirectTo)
-  } catch (err) {
-    console.error('Auth callback error:', err)
-    error.value = 'Authentication failed. Please try again.'
-    setTimeout(() => router.replace('/'), 3000)
-  }
+      // Redirect to where they came from, or home
+      const redirectTo = sessionStorage.getItem('auth-redirect') || '/'
+      sessionStorage.removeItem('auth-redirect')
+      router.replace(redirectTo)
+    }
+  })
+
+  // Also check if already signed in (session restored from storage)
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+      const redirectTo = sessionStorage.getItem('auth-redirect') || '/'
+      sessionStorage.removeItem('auth-redirect')
+      router.replace(redirectTo)
+    }
+  })
 })
 </script>
 

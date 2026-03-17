@@ -63,8 +63,8 @@ export interface CommunityKitRow {
 
 export type CommunityKitInsert = Omit<
   CommunityKitRow,
-  'id' | 'view_count' | 'cart_add_count' | 'created_at' | 'updated_at'
->
+  'id' | 'version' | 'view_count' | 'cart_add_count' | 'created_at' | 'updated_at'
+> & { version?: number }
 
 export interface KitItemRow {
   id: string
