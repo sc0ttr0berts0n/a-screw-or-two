@@ -5,14 +5,16 @@ function decrement() {
   if (model.value > 1) model.value--
 }
 
+const props = withDefaults(defineProps<{ max?: number }>(), { max: 999 })
+
 function increment() {
-  if (model.value < 100) model.value++
+  if (model.value < props.max) model.value++
 }
 
 function onInput(e: Event) {
   const val = parseInt((e.target as HTMLInputElement).value)
   if (!isNaN(val)) {
-    model.value = Math.max(1, Math.min(100, val))
+    model.value = Math.max(1, Math.min(props.max, val))
   }
 }
 </script>
@@ -26,9 +28,9 @@ function onInput(e: Event) {
       :value="model"
       @input="onInput"
       min="1"
-      max="100"
+      :max="max"
     />
-    <button class="qty-btn" @click="increment" :disabled="model >= 100">+</button>
+    <button class="qty-btn" @click="increment" :disabled="model >= max">+</button>
   </div>
 </template>
 
